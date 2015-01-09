@@ -5,35 +5,16 @@
   "Provides functions to compare two clojure datastructures and return the
 difference between them. Alterations will return the elements that differ,
 the removals will return elements that only exist in one collection."
-  (:require [clojure.set :as set]))
-
-(def h (-> (make-hierarchy)
-           (derive ::coll ::val)
-           (derive ::map  ::coll)
-           (derive ::seq  ::coll)
-           (derive ::set  ::coll)
-           (derive ::vec  ::seq)))
-
-(def tests [[map?        ::map]
-            [vector?     ::vec]
-            [sequential? ::seq]
-            [set?        ::set]
-            [coll?       ::coll]
-            [identity    ::other]])
-
-(defn tag-coll [coll]
-  (->> tests
-       (filter (fn [[test-fn tag]] (test-fn coll)))
-       first
-       last))
+  (:require [clojure.set :as set]
+            [differ.hierarchy :as h]))
 
 (defmulti alterations
   "Find elements that are different in new-state, when compared to state.
   The datastructure returned will be of the same type as the first argument
   passed. Works recursively on nested datastructures."
-  (fn [state new-state] [(tag-coll state) (tag-coll new-state)])
-  :hierarchy #'h)
-(defmethod alterations [::map ::map] [state new-state]
+  (fn [state new-state] [(h/tag-coll state) (h/tag-coll new-state)])
+  :hierarchy #'h/h)
+(defmethod alterations [:differ.hierarchy/map :differ.hierarchy/map] [state new-state]
   (loop [[k & ks] (keys new-state)
          diff (transient {})]
     (if-not k
@@ -48,7 +29,7 @@ the removals will return elements that only exist in one collection."
 
               :else
               (recur ks (assoc! diff k new-val)))))))
-(defmethod alterations [::seq ::vec] [state new-state]
+(defmethod alterations [:differ.hierarchy/seq :differ.hierarchy/vec] [state new-state]
   (loop [idx 0
          [old-val & old-rest :as old-coll] state
          [new-val & new-rest :as new-coll] new-state
@@ -64,9 +45,9 @@ the removals will return elements that only exist in one collection."
 
               :else
               (recur (inc idx) old-rest new-rest (conj! (conj! diff idx) val-diff)))))))
-(defmethod alterations [::seq ::seq] [state new-state]
+(defmethod alterations [:differ.hierarchy/seq :differ.hierarchy/seq] [state new-state]
   (into (list) (reverse (alterations state (vec new-state)))))
-(defmethod alterations [::set ::set] [state new-state]
+(defmethod alterations [:differ.hierarchy/set :differ.hierarchy/set] [state new-state]
   (set/difference new-state state))
 (defmethod alterations :default [state new-state]
   new-state)
@@ -75,9 +56,9 @@ the removals will return elements that only exist in one collection."
   "Find elements that are in state, but not in new-state.
   The datastructure returned will be of the same type as the first argument
   passed. Works recursively on nested datastructures."
-  (fn [state new-state] [(tag-coll state) (tag-coll new-state)])
-  :hierarchy #'h)
-(defmethod removals [::map ::map] [state new-state]
+  (fn [state new-state] [(h/tag-coll state) (h/tag-coll new-state)])
+  :hierarchy #'h/h)
+(defmethod removals [:differ.hierarchy/map :differ.hierarchy/map] [state new-state]
   (let [new-keys (set (keys new-state))]
     (loop [[k & ks] (keys state)
            diff (transient {})]
@@ -91,7 +72,7 @@ the removals will return elements that only exist in one collection."
             (if (and (coll? rms) (seq rms))
               (recur ks (assoc! diff k rms))
               (recur ks diff))))))))
-(defmethod removals [::seq ::vec] [state new-state]
+(defmethod removals [:differ.hierarchy/seq :differ.hierarchy/vec] [state new-state]
   (let [diff (- (count state) (count new-state))
         empty-state []]
     (loop [idx 0
@@ -109,11 +90,11 @@ the removals will return elements that only exist in one collection."
                   (= old-val new-rem))
             (recur (inc idx) old-rest new-rest rem)
             (recur (inc idx) old-rest new-rest (conj! (conj! rem idx) new-rem))))))))
-(defmethod removals [::seq ::seq] [state new-state]
+(defmethod removals [:differ.hierarchy/seq :differ.hierarchy/seq] [state new-state]
   (into (list) (reverse (removals state (vec new-state)))))
-(defmethod removals [::set ::set] [state new-state]
+(defmethod removals [:differ.hierarchy/set :differ.hierarchy/set] [state new-state]
   (set/difference state new-state))
-(defmethod removals [::coll ::coll] [state new-state]
+(defmethod removals [:differ.hierarchy/coll :differ.hierarchy/coll] [state new-state]
   (empty state))
 (defmethod removals :default [state new-state]
   state)
