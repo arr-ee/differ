@@ -11,6 +11,7 @@ in the differ.diff namespace, to similar datastructures."
   "Returns a new datastructure, containing the changes in the provided diff."
   (fn [state diff] [(h/tag-coll state) (h/tag-coll diff)])
   :hierarchy h/h)
+
 (defmethod alterations [:differ.hierarchy/map :differ.hierarchy/map] [state diff]
   (loop [[k & ks] (keys diff)
          result (transient state)]
@@ -19,6 +20,7 @@ in the differ.diff namespace, to similar datastructures."
       (let [old-val (get result k)
             diff-val (get diff k)]
         (recur ks (assoc! result k (alterations old-val diff-val)))))))
+
 (defmethod alterations [:differ.hierarchy/seq :differ.hierarchy/vec] [state diff]
   (loop [idx 0
          [old-val & old-rest :as old-coll] state
@@ -37,19 +39,25 @@ in the differ.diff namespace, to similar datastructures."
 
             :else
             (recur (inc idx) old-rest diff-coll (conj! result old-val))))))
+
 (defmethod alterations [:differ.hierarchy/seq :differ.hierarchy/seq] [state diff]
   (into (list) (reverse (alterations state (vec diff)))))
+
 (defmethod alterations [:differ.hierarchy/set :differ.hierarchy/set] [state diff]
   (set/union state diff))
+
 (defmethod alterations :default [state diff]
   diff)
+
 (prefer-method alterations [:differ.hierarchy/seq :differ.hierarchy/vec]
                            [:differ.hierarchy/seq :differ.hierarchy/seq])
+
 
 (defmulti removals
   "Returns a new datastructure, not containing the elements in the provided diff."
   (fn [state diff] [(h/tag-coll state) (h/tag-coll diff)])
   :hierarchy h/h)
+
 (defmethod removals [:differ.hierarchy/map :differ.hierarchy/map] [state diff]
   (loop [[k & ks] (keys diff)
          result (transient state)]
@@ -60,6 +68,7 @@ in the differ.diff namespace, to similar datastructures."
         (if (= 0 diff-val)
           (recur ks (dissoc! result k))
           (recur ks (assoc! result k (removals old-val diff-val))))))))
+
 (defmethod removals [:differ.hierarchy/seq :differ.hierarchy/vec] [state diff]
   (let [max-index (- (count state) (first diff))]
     (loop [index 0
@@ -74,11 +83,15 @@ in the differ.diff namespace, to similar datastructures."
 
             :else
             (recur (inc index) old-rest diff-coll (conj! result old-val))))))
+
 (defmethod removals [:differ.hierarchy/seq :differ.hierarchy/seq] [state diff]
   (into (list) (reverse (removals state (vec diff)))))
+
 (defmethod removals [:differ.hierarchy/set :differ.hierarchy/set] [state diff]
   (set/difference state diff))
+
 (defmethod removals :default [state diff]
   state)
+
 (prefer-method removals [:differ.hierarchy/seq :differ.hierarchy/vec]
                         [:differ.hierarchy/seq :differ.hierarchy/seq])
