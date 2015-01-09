@@ -10,6 +10,8 @@
            (derive ::set  ::coll)
            (derive ::vec  ::seq)))
 
+;; tests vector is order-sensitive: put more specific tests on top
+;; i.e. vector? before sequential?, sequential? before coll?
 (def tests [[map?        ::map]
             [vector?     ::vec]
             [sequential? ::seq]
