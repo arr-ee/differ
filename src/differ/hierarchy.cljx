@@ -3,12 +3,13 @@
 
 (ns differ.hierarchy)
 
-(def h (-> (make-hierarchy)
-           (derive ::coll ::val)
-           (derive ::map  ::coll)
-           (derive ::seq  ::coll)
-           (derive ::set  ::coll)
-           (derive ::vec  ::seq)))
+;; We’re using `atom` here because cljs doesn’t have Vars, and `defmulti` requires a reference type
+(def h (atom (-> (make-hierarchy)
+                 (derive ::coll ::val)
+                 (derive ::map  ::coll)
+                 (derive ::seq  ::coll)
+                 (derive ::set  ::coll)
+                 (derive ::vec  ::seq))))
 
 ;; tests vector is order-sensitive: put more specific tests on top
 ;; i.e. vector? before sequential?, sequential? before coll?

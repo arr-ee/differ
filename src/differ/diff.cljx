@@ -13,7 +13,7 @@ the removals will return elements that only exist in one collection."
   The datastructure returned will be of the same type as the first argument
   passed. Works recursively on nested datastructures."
   (fn [state new-state] [(h/tag-coll state) (h/tag-coll new-state)])
-  :hierarchy #'h/h)
+  :hierarchy h/h)
 (defmethod alterations [:differ.hierarchy/map :differ.hierarchy/map] [state new-state]
   (loop [[k & ks] (keys new-state)
          diff (transient {})]
@@ -51,13 +51,15 @@ the removals will return elements that only exist in one collection."
   (set/difference new-state state))
 (defmethod alterations :default [state new-state]
   new-state)
+(prefer-method alterations [:differ.hierarchy/seq :differ.hierarchy/vec]
+                           [:differ.hierarchy/seq :differ.hierarchy/seq])
 
 (defmulti removals
   "Find elements that are in state, but not in new-state.
   The datastructure returned will be of the same type as the first argument
   passed. Works recursively on nested datastructures."
   (fn [state new-state] [(h/tag-coll state) (h/tag-coll new-state)])
-  :hierarchy #'h/h)
+  :hierarchy h/h)
 (defmethod removals [:differ.hierarchy/map :differ.hierarchy/map] [state new-state]
   (let [new-keys (set (keys new-state))]
     (loop [[k & ks] (keys state)
@@ -98,3 +100,12 @@ the removals will return elements that only exist in one collection."
   (empty state))
 (defmethod removals :default [state new-state]
   state)
+;; these and other `prefer-methods` are required by clojurescript to avoid
+;; `Multiple methods in multimethod 'alterations' match dispatch value` errors
+;; (looks like a cljs bug)
+(prefer-method removals [:differ.hierarchy/seq :differ.hierarchy/vec]
+                        [:differ.hierarchy/seq :differ.hierarchy/seq])
+(prefer-method removals [:differ.hierarchy/seq :differ.hierarchy/vec]
+                        [:differ.hierarchy/coll :differ.hierarchy/coll])
+(prefer-method removals [:differ.hierarchy/seq :differ.hierarchy/seq]
+                        [:differ.hierarchy/coll :differ.hierarchy/coll])
